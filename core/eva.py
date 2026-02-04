@@ -1,5 +1,7 @@
 from core.state_manager import StateManager
 from voice.text_to_speech import speak
+from voice.speech_to_text import listen
+from voice.wake_word import is_wake_word
 from auth.voice_auth import authenticate_voice
 
 class EVA:
@@ -14,7 +16,19 @@ class EVA:
 
         if authenticate_voice():
             speak("Authentication successful.")
-            speak("Hello. I am EVA. I’m ready when you are.")
+            speak("EVA online.")
             self.state.set_active(True)
+            self.idle_loop()
         else:
             speak("Authentication failed. Access denied.")
+
+    def idle_loop(self):
+        speak("Standing by.")
+
+        while True:
+            text = listen()
+            if not text:
+                continue
+
+            if is_wake_word(text):
+                speak("Yes? I’m listening.")
