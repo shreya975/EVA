@@ -1,0 +1,11 @@
+system_control:
+  allowed: false
+
+automation:
+  allowed: false
+
+file_access:
+  allowed: true
+
+learning:
+  allowed: false
