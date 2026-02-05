@@ -1,7 +1,8 @@
 import pyttsx3
 
-engine = pyttsx3.init()
-
-def speak(text):
+def speak(text: str):
+    engine = pyttsx3.init()
+    engine.setProperty("rate", 175)
     engine.say(text)
     engine.runAndWait()
+    engine.stop()
