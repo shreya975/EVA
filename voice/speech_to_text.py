@@ -1,38 +1,63 @@
-import speech_recognition as sr
+import os
+import json
+import queue
+import sounddevice as sd
+from vosk import Model, KaldiRecognizer
 
-recognizer = sr.Recognizer()
-recognizer.energy_threshold = 300
-recognizer.dynamic_energy_threshold = True
+# =========================
+# CONFIG
+# =========================
+SAMPLE_RATE = 16000  # REQUIRED by VOSK
+CHANNELS = 1
 
-MIC_INDEX = 5  # KEEP YOUR CORRECT MIC INDEX
+# =========================
+# MODEL PATH (BULLETPROOF)
+# =========================
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "vosk-small-en")
 
-def listen(timeout=2, phrase_time_limit=3):
+if not os.path.exists(MODEL_PATH):
+    raise RuntimeError(f"[EVA][STT] Model path not found: {MODEL_PATH}")
+
+# =========================
+# INIT VOSK
+# =========================
+model = Model(MODEL_PATH)
+recognizer = KaldiRecognizer(model, SAMPLE_RATE)
+
+audio_queue = queue.Queue()
+
+# =========================
+# AUDIO CALLBACK
+# =========================
+def audio_callback(indata, frames, time, status):
+    if status:
+        print("[EVA][STT] Status:", status)
+    audio_queue.put(bytes(indata))
+
+# =========================
+# LISTEN FUNCTION
+# =========================
+def listen(timeout=4):
     try:
-        with sr.Microphone(device_index=MIC_INDEX) as source:
-            print("[EVA][STT] Mic opened")
-            recognizer.adjust_for_ambient_noise(source, duration=0.5)
+        with sd.RawInputStream(
+            samplerate=SAMPLE_RATE,
+            blocksize=8000,
+            dtype="int16",
+            channels=CHANNELS,
+            callback=audio_callback,
+        ):
+            try:
+                data = audio_queue.get(timeout=timeout)
+            except queue.Empty:
+                return ""
 
-            audio = recognizer.listen(
-                source,
-                timeout=timeout,
-                phrase_time_limit=phrase_time_limit
-            )
-
-        print("[EVA][STT] Audio captured")
-
-        text = recognizer.recognize_google(audio)
-        print(f"[EVA][STT] Recognized: {text}")
-
-        return text.lower().strip()
-
-    except sr.WaitTimeoutError:
-        print("[EVA][STT] Timeout (no speech)")
-        return ""
-
-    except sr.UnknownValueError:
-        print("[EVA][STT] Could not understand")
-        return ""
+            if recognizer.AcceptWaveform(data):
+                result = json.loads(recognizer.Result())
+                return result.get("text", "").lower().strip()
 
     except Exception as e:
         print("[EVA][STT] ERROR:", e)
         return ""
+
+    return ""

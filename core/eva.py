@@ -32,23 +32,16 @@ class EVA:
             speak("Authentication failed. Access denied.")
 
     def idle_loop(self):
-        print("[EVA] Entered idle loop")
-        speak("Standing by.")
-        print("[EVA] Listening for wake word...")
+       print("[EVA] Listening for wake word...")
+       speak("Standing by.")
 
-        while  True:
-            print("[EVA] Waiting for audio...")
-            text = listen()
-            if text:
-                print(f"[EVA] Heard (raw): {text}")
+    while True:
+        print("[EVA] Waiting for audio...")
+        text = listen()
 
-            if is_wake_word(text):
-                now = time.time()
-                if now - self.last_wake < 2:
-                    continue
+        if text:
+            print(f"[EVA] Heard: {text}")
 
-                self.last_wake = now
-                print("[EVA] Wake word detected")
-
-                time.sleep(0.4)  # allow mic to release
-                speak("Yes? I’m listening.")
+        if is_wake_word(text):
+            print("[EVA] Wake word detected")
+            speak("Yes? I’m listening.")
